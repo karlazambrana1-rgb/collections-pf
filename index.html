@@ -10,6 +10,25 @@
   --bg:#F5F6F8;--card:#FFF;--text:#0B1E3E;--muted:#6B7490;--border:#E2E5EE;
   --b0:#3B82F6;--b1:#F59E0B;--b2:#F97316;--b3:#EF4444;--b4:#991B1B}
 *{box-sizing:border-box;margin:0;padding:0}
+
+/* LOGIN */
+#ls{position:fixed;inset:0;background:#0B1E3E;z-index:9999;display:flex;align-items:center;justify-content:center}
+#ls.hidden{display:none}
+.lcard{background:#fff;border-radius:14px;padding:40px 36px;width:340px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.llogo{font-size:13px;font-weight:600;color:#0B1E3E;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.llogo span{color:#E87722}
+.lsub{font-size:11px;color:#6B7490;margin-bottom:28px}
+.llbl{font-size:11px;font-weight:600;color:#0B1E3E;text-align:left;display:block;margin-bottom:5px}
+.linp{width:100%;padding:10px 14px;border:1.5px solid #E2E5EE;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;color:#0B1E3E;transition:border .15s;letter-spacing:.12em}
+.linp:focus{border-color:#E87722}
+.linp.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.lbtn{width:100%;margin-top:16px;background:#E87722;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+.lbtn:hover{background:#FF9244}
+.lbtn:active{transform:scale(.98)}
+.lerr{font-size:11px;color:#EF4444;margin-top:10px;min-height:16px}
+.lfooter{font-size:10px;color:#B0B5C5;margin-top:22px}
+
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
 
 /* HEADER */
@@ -192,6 +211,20 @@ tr.row-saved td{background:#F0FDF4;transition:background 1.2s}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="ls">
+ <div class="lcard">
+  <div class="llogo">Power <span>Financial</span></div>
+  <div class="lsub">Collections Dashboard · Acceso restringido</div>
+  <label class="llbl">Contraseña</label>
+  <input class="linp" type="password" id="lpw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="lbtn" onclick="doLogin()">Entrar</button>
+  <div class="lerr" id="lerr"></div>
+  <div class="lfooter">Power Financial Services LLC · Puerto Rico</div>
+ </div>
+</div>
+
 
 <!-- CONFIG MODAL -->
 <div class="overlay" id="cfg-ov" onclick="closeMod('cfg-ov',event)">
@@ -899,6 +932,44 @@ function toast(msg,type){
 // ════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════
+
+// ── LOGIN ──────────────────────────────────────────────────
+const PW_HASH = "0a84534737baf17fd19ac36a396608eaef293150c41582cae01a0821629daa33";
+const SESSION_KEY = "pf_auth_v1";
+
+async function hashStr(s){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+async function doLogin(){
+  const val = document.getElementById("lpw").value;
+  if(!val)return;
+  const h = await hashStr(val);
+  if(h === PW_HASH){
+    sessionStorage.setItem(SESSION_KEY,"1");
+    document.getElementById("ls").classList.add("hidden");
+    initApp();
+  } else {
+    const inp = document.getElementById("lpw");
+    const err = document.getElementById("lerr");
+    err.textContent = "Contraseña incorrecta";
+    inp.classList.add("shake");
+    inp.value="";
+    setTimeout(()=>{inp.classList.remove("shake");err.textContent="";},1000);
+  }
+}
+
+function checkAuth(){
+  if(sessionStorage.getItem(SESSION_KEY)==="1"){
+    document.getElementById("ls").classList.add("hidden");
+    initApp();
+  } else {
+    document.getElementById("lpw").focus();
+  }
+}
+
+function initApp(){
 loadLocal();
 document.getElementById("live-date").textContent=new Date().toLocaleDateString("es-PR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 if(SCRIPT_URL){
@@ -908,6 +979,8 @@ if(SCRIPT_URL){
  setConn("err","Sin configurar");
  if(RAW.length){document.getElementById("load-state").style.display="none";updateKPIs();renderTable();}
 }
+}
+checkAuth();
 </script>
 </body>
 </html>
